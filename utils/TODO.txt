@@ -1,9 +1,6 @@
 TODO Coding
-1. Change Memory 
-2. Implement fixpoint computation (Repeat until state doesn't change) 
-3. Fix Jumps  
-4. Makefile 
-5. Refactor Main 
+3. Fix Jumps
+6. Refactor Main
 
 TODO Reading
 1. Learn about post dominance frontier (Post dominance node) 

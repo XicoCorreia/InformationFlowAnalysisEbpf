@@ -49,6 +49,6 @@ data SecurityLevel = High | Low
   deriving (Eq, Show)
 
 type State = [(Reg, SecurityLevel)]
-type Memory = [(Label, Reg, SecurityLevel)]
+type Memory = SecurityLevel
 type Context = [Int]
 type SystemState = ([State], Context, Memory)

@@ -1,1 +1,2 @@
 1. How to translate Jset to an Equation
+2. In assignReg what happen if r is a high security and content is low

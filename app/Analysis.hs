@@ -5,66 +5,49 @@ import qualified Data.Map as Map
 import Types
 import Ebpf.Asm
 
-unionStt :: State -> State -> State
-unionStt [] [] = []
-unionStt [] a = a
-unionStt a [] = a
-unionStt ((reg1, sec1):s1r) ((_, sec2):s2r) =
-  if sec1 == High || sec2 == High
-    then (reg1, High) : unionStt s1r s2r
-    else (reg1, Low) : unionStt s1r s2r
-
+-- Perform a the information flow  analysis on a set of equations.
 informationFlowAnalysis :: Equations -> State -> [State]
 informationFlowAnalysis e initialState =
-  informationFlowAnalysisHelper (Map.toList e) (replicate ((length e) + 1) initialState, [], [])
+  fixpointComputation (replicate ((length e) + 1) initialState, [], Low) (Map.toList e)
 
-informationFlowAnalysisHelper :: [(Int, [(Int, Stmt)])] -> SystemState -> [State]
-informationFlowAnalysisHelper eq ss = do
-  let (state', context', memory') = iterateEquations eq ss
+-- Perform fixpoint computation for the analysis.
+fixpointComputation :: SystemState -> [(Label, [(Label, Stmt)])] -> [State]
+fixpointComputation ss eq = 
   if ss == (state', context', memory') 
-    then state'      -- Return the final state
-    else informationFlowAnalysisHelper eq (state', context', memory')
+    then state'
+    else fixpointComputation (state', context', memory') eq
+      where 
+        (state', context', memory') = foldl updateSystemState ss eq
 
-
-
-iterateEquations ::  [(Int, [(Int, Stmt)])] -> SystemState -> SystemState
-iterateEquations [] ss = ss
-iterateEquations (v:vs) ss = 
-    iterateEquations vs (processElement v ss)
-
-processElement :: (Int, [(Int, Stmt)]) -> SystemState -> SystemState
-processElement (eqIdx, ops) (states, context, mem) = 
-    (take eqIdx states ++ [states'] ++ drop (eqIdx + 1) states, context', mem')
+-- This function updates the System state with a new state for the node being processed.
+updateSystemState ::  SystemState -> (Label, [(Label, Stmt)]) -> SystemState
+updateSystemState (states, context, mem) (nodeIdx, eqs) = 
+  (before ++ [state'] ++ after , context', mem')
   where
-    startState = states !! eqIdx
-    (states', context', mem') = processElementHelper startState (eqIdx,ops) (states, context, mem)
+    startState = states !! nodeIdx
+    (state', context', mem') = processElement startState (states, context, mem) (nodeIdx, eqs)
+    before = take nodeIdx states 
+    after = drop (nodeIdx + 1) states
     
+-- Processes the equations for a specific node, returning the updated state.     
+processElement :: State -> SystemState -> (Label, [(Label, Stmt)]) -> (State, Context, Memory)
+processElement state (_, c, m) (_,[]) = (state, c, m)
+processElement state (states, context, mem) (currentNode, ((prevNode,stmt):es)) = otherState
+  where 
+    (state', context', mem') = updateUsingStmt (states !! prevNode) context mem (prevNode, currentNode) stmt 
+    newState = unionStt state state'
+    otherState = processElement newState (states, context', mem') (currentNode, es)
 
-processElementHelper :: State -> (Int, [(Int, Stmt)]) -> SystemState -> (State, Context, Memory)
-processElementHelper startState (_,[]) (_, c, m) = (startState, c, m)
-processElementHelper startState (currentNode, ((prevNode,sttm):es)) (states, context, mem) =
-  let
-    -- takes the starting state 
-    prevState = states !! prevNode
-    -- uses the expression to create a new state starting from the list of states
-    (state', context', memory') = updateUsingStmt prevState context mem (prevNode, currentNode) sttm 
-    -- does the union between the original and the newly created (if one is high is high, otherwise low)
-    newState = unionStt startState state'
-    -- recurs on all elements
-    otherState = processElementHelper newState (prevNode, es) (states, context', memory')
-    -- i can return the result of the last recursion
-  in otherState
-
--- updateUsingStmt propagates security levels based on the Stmt type
+------------------- TODO ------------------------
 updateUsingStmt :: State -> Context -> Memory -> (Int,Int) -> Stmt -> (State, Context, Memory)
 updateUsingStmt s c mem (prevNode, currentNode) (AssignReg r e) = (updatedState, c, mem)
   where 
     secLevel = updateUsingExp s c (prevNode, currentNode)  e
     updatedState = updateRegisterSecurity r secLevel s
-updateUsingStmt s c mem (prevNode, currentNode)  (AssignMem r e) = (s, c, updatedMemory)
+updateUsingStmt s c mem (prevNode, currentNode)  (AssignMem _ e) = (s, c, updatedMemory)
   where
     secLevel = updateUsingExp s c (prevNode, currentNode)  e
-    updatedMemory = updateMemorySecurity prevNode r secLevel mem
+    updatedMemory = if secLevel == High then High else mem
 updateUsingStmt s c mem _ (Goto _) = (s, c, mem)  
 updateUsingStmt s c mem (prevNode, currentNode)  (If test lbl) =  
   let 
@@ -84,6 +67,8 @@ updateUsingStmt s c mem (prevNode, currentNode)  (If test lbl) =
     extractExps (GreaterEqual e1 e2) = (e1, e2)
 updateUsingStmt s c mem _ SKIP = (s, c, mem)  -- ! undefined operations do not affect
 
+
+------------------- TODO ------------------------
 updateUsingExp :: State -> Context -> (Int,Int) -> Exp -> SecurityLevel
 updateUsingExp s c (prevNode, currentNode)  e = 
   case e of
@@ -124,16 +109,16 @@ updateUsingExp s c (prevNode, currentNode)  e =
       in 
         resultSecLevel 
 
+-- Update the register security in a state.
 updateRegisterSecurity :: Reg -> SecurityLevel -> State -> State
-updateRegisterSecurity r secLevel = map (\(regist, sec) -> 
-    if regist == r 
-        then (regist, if sec == High then sec else secLevel)  -- Keep high security if already high
-        else (regist, sec))
+updateRegisterSecurity r secLevel = map (\(reg, sec) -> 
+    if reg == r 
+        then (reg, if sec == High then sec else secLevel)
+        else (reg, sec))
 
-updateMemorySecurity :: Int -> Reg -> SecurityLevel -> Memory -> Memory
-updateMemorySecurity prevNode r secLevel [] = [(prevNode, r, secLevel)] 
-updateMemorySecurity prevNode ri secLevel ((idxj, rj, secLevelj) : rest) = 
-  if prevNode == idxj &&  ri == rj 
-    then  (prevNode, ri, if secLevelj == High then secLevelj else secLevel) : rest 
-    else  (idxj, rj, secLevelj) : updateMemorySecurity prevNode ri secLevel rest 
 
+-- Union of two states.
+unionStt :: State -> State -> State
+unionStt = zipWith combine
+  where
+    combine (reg, sec1) (_, sec2) = (reg, if sec1 == High || sec2 == High then High else Low)
