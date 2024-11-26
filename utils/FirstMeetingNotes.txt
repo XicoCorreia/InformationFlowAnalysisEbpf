@@ -1,0 +1,30 @@
+Start with MP3
+- More precise analysis, for each line and node in the program we need to have a state
+- Same structure as first analysis
+- Figure out where the jump stops 
+- Compute post dominance frontier (Post dominance node) -> Map this notion to the control flow
+- Position yourself in the node -> check what executions u are gonna execute or if there is a work-around 
+
+- Memory
+1st option - Write memory everywhere
+2nd use Interval analysis
+
+Project
+
+Describe
+Question you re working
+summarize the project
+Explain your solution (describe what is to analise the ebpf)
+Discuss the most important parts memory and Jumps
+
+What is your abstract domain
+What is the abstract model of the state (abstract values)
+How the values are modelled
+Define precisely how each operation works with the security level
+
+Implement fixpoint computation
+- Repeat until state doesn't change 
+
+If one branch nothing happens it is low but if in the other is high then it is high
+If updated in the branch then it is updated in the common code
+
