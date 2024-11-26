@@ -1,49 +1,41 @@
 module Equations (cfgToEquations) where
 
-import Types
-import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Set (Set)
 import qualified Data.Set as Set
+
+import Types
 import Ebpf.Asm
 
-
--- Add a statement to an equation list
-addElementToList :: Int -> Int -> Stmt -> Equations -> Equations
-addElementToList key prev stmt eqs =
-  let currentList = Map.findWithDefault [] key eqs
-      newList = (prev, stmt) : currentList
-  in Map.insert key newList eqs
-
--- Translate CFG edges into equations
+-- Converts the edges of a Control Flow Graph (CFG) into a set of equations.
+-- Each edge in the CFG is mapped to an equation representing the flow of control.
 cfgToEquations :: CFG -> Equations -> Equations
-cfgToEquations c eq = foldr edgeToEquation eq (Set.toList c)
+cfgToEquations cfg eq = foldr edgeToEquation eq (Set.toList cfg)
 
+-- Converts a single edge from the CFG into an equation.
 edgeToEquation :: (Label, Trans, Label) -> Equations -> Equations
-edgeToEquation (from, NonCF i, to) = addElementToList to from (opToStmt i)
-edgeToEquation (from, Assert cmp r ir, to) = addElementToList to from (If (assertToTest cmp r ir) to)
-edgeToEquation (from, Unconditional, to) = addElementToList to from (Goto to)
+edgeToEquation (from, NonCF i, to) = addEquation from to (opToStmt i)
+edgeToEquation (from, Assert cmp r ir, to) = addEquation from to (If (assertToCond cmp r ir) to)
+edgeToEquation (from, Unconditional, to) = addEquation from to (Goto to)
 
--- Helpers to translate instructions and conditions
-assertToTest :: Jcmp -> Reg -> RegImm -> Test
-assertToTest cmp r ri = case cmp of
-  Jeq -> EQUAL exp1 exp2
-  Jne -> NOTEQUAL exp1 exp2
-  Jgt -> GREATTHAN exp1 exp2
-  Jge -> GREATEQUAL exp1 exp2
-  Jlt -> LESSTHAN exp1 exp2
-  Jle -> LESSEQUAL exp1 exp2
-  Jsgt -> GREATTHAN exp1 exp2
-  Jsge -> GREATEQUAL exp1 exp2
-  Jslt -> LESSTHAN exp1 exp2
-  Jsle -> LESSEQUAL exp1 exp2
+-- Converts a conditional jump (Jcmp) into an appropriate condition (Cond).
+assertToCond :: Jcmp -> Reg -> RegImm -> Cond
+assertToCond cmp r ri = case cmp of
+  Jeq -> Equal exp1 exp2
+  Jne -> NotEqual exp1 exp2
+  Jgt -> GreaterThan exp1 exp2
+  Jge -> GreaterEqual exp1 exp2
+  Jlt -> LessThan exp1 exp2
+  Jle -> LessEqual exp1 exp2
+  Jsgt -> GreaterThan exp1 exp2
+  Jsge -> GreaterEqual exp1 exp2
+  Jslt -> LessThan exp1 exp2
+  Jsle -> LessEqual exp1 exp2
   Jset -> error "JSET not supported"
   where
     exp1 = Register r
-    exp2 = case ri of
-      R reg -> Register reg
-      Imm n -> Const (fromIntegral n)
+    exp2 = regOrConstant ri
 
+-- Converts a given instruction (e.g., binary operation, store) into an equivalent statement (Stmt).
 opToStmt :: Instruction -> Stmt
 opToStmt (Binary _ op r ri) = AssignReg r $ case op of
   Add -> AddOp exp1 exp2
@@ -54,12 +46,20 @@ opToStmt (Binary _ op r ri) = AssignReg r $ case op of
   _   -> error "Unsupported binary operation"
   where
     exp1 = Register r
-    exp2 = case ri of
-      R reg -> Register reg
-      Imm n -> Const (fromIntegral n)
-opToStmt (Store _ r _ ri) = AssignMem r exp2
-  where
-    exp2 = case ri of
-      R reg -> Register reg
-      Imm n -> Const (fromIntegral n)
+    exp2 = regOrConstant ri
+opToStmt (Store _ r _ ri) = AssignMem r (regOrConstant ri)
 opToStmt _ = SKIP
+
+
+-- Adds a new equation (statement) to the equation list for the given node.
+addEquation :: Label -> Label -> Stmt -> Equations -> Equations
+addEquation prev node stmt eqs =
+  let currentList = Map.findWithDefault [] node eqs
+      newList = (prev, stmt) : currentList
+  in Map.insert node newList eqs
+
+-- Converts a RegImm value into either a Register or a Constant expression.
+regOrConstant :: RegImm -> Exp
+regOrConstant r = case r of
+  R reg -> Register reg
+  Imm n -> Const (fromIntegral n)

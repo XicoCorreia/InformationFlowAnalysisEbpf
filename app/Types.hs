@@ -4,7 +4,7 @@ import Data.Set (Set)
 import Data.Map (Map)
 import Ebpf.Asm
 
--- Shared Types
+-- CFG Types
 data Trans =
     NonCF Instruction  -- No jumps, or exit
   | Unconditional
@@ -21,31 +21,32 @@ data Exp =
   | Const Int
   | AddOp Exp Exp
   | SubOp Exp Exp
-  | MulOp Exp Exp  -- Not implemented for Intervals
-  | DivOp Exp Exp  -- Not implemented for Intervals
+  | MulOp Exp Exp  
+  | DivOp Exp Exp  
     deriving (Show)
 
-data Test =
-    EQUAL Exp Exp
-  | NOTEQUAL Exp Exp
-  | LESSTHAN Exp Exp
-  | LESSEQUAL Exp Exp
-  | GREATTHAN Exp Exp
-  | GREATEQUAL Exp Exp
+data Cond = 
+      Equal Exp Exp
+    | NotEqual Exp Exp
+    | LessThan Exp Exp
+    | LessEqual Exp Exp
+    | GreaterThan Exp Exp
+    | GreaterEqual Exp Exp
     deriving (Show)
 
 data Stmt =
     AssignReg Reg Exp
   | AssignMem Reg Exp
-  | If Test Label
+  | If Cond Label
   | Goto Label
-  | SKIP
+  | SKIP -- ! For Undefined statements
     deriving (Show)
 
-type Equations = Map Int [(Int, Stmt)]
+type Equations = Map Label [(Label, Stmt)]
 
 -- Security Types
-data SecurityLevel = High | Low deriving (Eq, Show)
+data SecurityLevel = High | Low 
+  deriving (Eq, Show)
 
 type State = [(Reg, SecurityLevel)]
 type Memory = [(Label, Reg, SecurityLevel)]

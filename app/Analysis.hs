@@ -1,15 +1,9 @@
 module Analysis (informationFlowAnalysis) where
 
-import Types
 import qualified Data.Map as Map
-import Ebpf.Asm
 
-initialState :: State
-initialState = [
-    (Reg 0, Low), (Reg 1, High), (Reg 2, Low), 
-    (Reg 3, Low), (Reg 4, Low), (Reg 5, Low), 
-    (Reg 6, Low), (Reg 7, Low), (Reg 8, Low), 
-    (Reg 9, Low), (Reg 10, Low)]
+import Types
+import Ebpf.Asm
 
 unionStt :: State -> State -> State
 unionStt [] [] = []
@@ -20,8 +14,8 @@ unionStt ((reg1, sec1):s1r) ((_, sec2):s2r) =
     then (reg1, High) : unionStt s1r s2r
     else (reg1, Low) : unionStt s1r s2r
 
-informationFlowAnalysis :: Equations -> [State]
-informationFlowAnalysis e =
+informationFlowAnalysis :: Equations -> State -> [State]
+informationFlowAnalysis e initialState =
   informationFlowAnalysisHelper (Map.toList e) (replicate ((length e) + 1) initialState, [], [])
 
 informationFlowAnalysisHelper :: [(Int, [(Int, Stmt)])] -> SystemState -> [State]
@@ -81,13 +75,13 @@ updateUsingStmt s c mem (prevNode, currentNode)  (If test lbl) =
     if secLevelExp1 == Low && secLevelExp2 == Low then (s, c, mem) else (s, c', mem) 
   where 
     c' = if lbl `elem` c then c else c ++ [lbl]
-    extractExps :: Test -> (Exp, Exp)
-    extractExps (EQUAL e1 e2)      = (e1, e2)
-    extractExps (NOTEQUAL e1 e2)   = (e1, e2)
-    extractExps (LESSTHAN e1 e2)   = (e1, e2)
-    extractExps (LESSEQUAL e1 e2)  = (e1, e2)
-    extractExps (GREATTHAN e1 e2)  = (e1, e2)
-    extractExps (GREATEQUAL e1 e2) = (e1, e2)
+    extractExps :: Cond -> (Exp, Exp)
+    extractExps (Equal e1 e2)      = (e1, e2)
+    extractExps (NotEqual e1 e2)   = (e1, e2)
+    extractExps (LessThan e1 e2)   = (e1, e2)
+    extractExps (LessEqual e1 e2)  = (e1, e2)
+    extractExps (GreaterThan e1 e2)  = (e1, e2)
+    extractExps (GreaterEqual e1 e2) = (e1, e2)
 updateUsingStmt s c mem _ SKIP = (s, c, mem)  -- ! undefined operations do not affect
 
 updateUsingExp :: State -> Context -> (Int,Int) -> Exp -> SecurityLevel

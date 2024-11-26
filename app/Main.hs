@@ -1,15 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import qualified System.Environment as Sys
-import qualified Data.Set as Set
-import Text.Printf
-import Data.Maybe (mapMaybe)
-import qualified Data.Map as Map
-import Data.List (intercalate)
 import Types
 import Equations
 import Analysis
+
+import qualified System.Environment as Sys
+import qualified Data.Set as Set
+import qualified Data.Map as Map
+import Text.Printf
+import Data.Maybe (mapMaybe)
+import Data.List (intercalate)
 
 import Data.Text.Display
 
@@ -46,6 +47,14 @@ cfg prog = Set.unions $ map transfer $ label prog
           Set.empty
         _ ->
           Set.singleton (i, NonCF instr, i+1)
+
+
+initialState :: State
+initialState = [
+    (Reg 0, Low), (Reg 1, High), (Reg 2, Low), 
+    (Reg 3, Low), (Reg 4, Low), (Reg 5, Low), 
+    (Reg 6, Low), (Reg 7, Low), (Reg 8, Low), 
+    (Reg 9, Low), (Reg 10, Low)]
 
 ------------------- The following is just for visualisation ------------------------
 
@@ -105,7 +114,7 @@ main = do
           putStrLn "Equations:"
           putStrLn $ formatMap a
           putStrLn "\nStates:"
-          let st = informationFlowAnalysis a     
+          let st = informationFlowAnalysis a initialState   
           mapM_ printWithIndex (zip ([0..] :: [Int]) st) 
             where
               printWithIndex (index, lst) = putStrLn (show index ++ ": " ++ show lst)
