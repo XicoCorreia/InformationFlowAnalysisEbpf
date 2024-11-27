@@ -1,6 +1,5 @@
 TODO Coding
 3. Fix Jumps
-6. Refactor Main
 
 TODO Reading
 1. Learn about post dominance frontier (Post dominance node) 

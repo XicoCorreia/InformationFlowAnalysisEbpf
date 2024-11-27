@@ -49,12 +49,6 @@ cfg prog = Set.unions $ map transfer $ label prog
           Set.singleton (i, NonCF instr, i+1)
 
 
-initialState :: State
-initialState = [
-    (Reg 0, Low), (Reg 1, High), (Reg 2, Low), 
-    (Reg 3, Low), (Reg 4, Low), (Reg 5, Low), 
-    (Reg 6, Low), (Reg 7, Low), (Reg 8, Low), 
-    (Reg 9, Low), (Reg 10, Low)]
 
 ------------------- The following is just for visualisation ------------------------
 
@@ -85,10 +79,24 @@ formatMap m = intercalate "\n" $ map formatEntry (Map.toList m)
   where
     formatEntry (key, valueList) = show key ++ " -> " ++ show valueList
 
+printWithIndex :: (Int, State) -> IO ()
+printWithIndex (index, lst) = putStrLn (show index ++ ": " ++ show lst)
+
+
+------------------- Environment for the analysis ------------------------
+
+initialState :: State
+initialState = [
+    (Reg 0, Low), (Reg 1, High), (Reg 2, Low), 
+    (Reg 3, Low), (Reg 4, Low), (Reg 5, Low), 
+    (Reg 6, Low), (Reg 7, Low), (Reg 8, Low), 
+    (Reg 9, Low), (Reg 10, Low)]
+
 main :: IO ()
 main = do
   args <- Sys.getArgs
   case args of
+    -- Create CFG in dotFile
     [ebpfFile, dotFile] -> do
       res <- parseFromFile ebpfFile
       case res of
@@ -103,20 +111,21 @@ main = do
                              markNodes prog ++ "}")
           printf "Visualised the CFG in %s\n" dotFile
     [ebpfFile] -> do
-      putStrLn "Run Information Flow Analysis\n"
+      printf "Run Information Flow Analysis\n"
       res <- parseFromFile ebpfFile
       case res of
         Left err -> do
           putStrLn "Some sort of error occurred while parsing:"
           print err
         Right prog -> do
-          let a = cfgToEquations (cfg prog) (Map.empty)
-          putStrLn "Equations:"
-          putStrLn $ formatMap a
-          putStrLn "\nStates:"
-          let st = informationFlowAnalysis a initialState   
-          mapM_ printWithIndex (zip ([0..] :: [Int]) st) 
-            where
-              printWithIndex (index, lst) = putStrLn (show index ++ ": " ++ show lst)
-    _ -> 
-      putStrLn "Usage <EBPF_FILE>\n"
+          let edges = cfg prog
+          let equations = cfgToEquations edges (Map.empty)
+          printf "\nEquations:\n"
+          putStrLn $ formatMap equations
+          let states = informationFlowAnalysis equations initialState 
+          printf "\nFinal states:\n"  
+          mapM_ printWithIndex (zip ([0..] :: [Int]) states) 
+    _ -> do
+      putStrLn "Usage:"
+      putStrLn "- Create CFG in dot file:\n <EBPF_FILE> <DOT_FILE>"
+      putStrLn "- Run information flow analysis:\n <EBPF_FILE>"
