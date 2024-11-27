@@ -38,36 +38,32 @@ processElement state (states, context, mem) (currentNode, ((prevNode,stmt):es)) 
     newState = unionStt state state'
     otherState = processElement newState (states, context', mem') (currentNode, es)
 
-------------------- TODO ------------------------
+-- Update a node's state by analysing the security level of an equation.
 updateUsingStmt :: State -> Context -> Memory -> (Int,Int) -> Stmt -> (State, Context, Memory)
-updateUsingStmt s c mem (prevNode, currentNode) (AssignReg r e) = (updatedState, c, mem)
+updateUsingStmt s c mem (prevNode, currentNode) (AssignReg r e) = 
+  case lookup r s of 
+    Nothing -> error ("Not defined register: " ++ show r)
+    _ -> (updatedState, c, mem)
   where 
-    secLevel = processExpression s c (prevNode, currentNode)  e
+    secLevel = processExpression s c (prevNode, currentNode) e
     updatedState = updateRegisterSecurity r secLevel s
-updateUsingStmt s c mem (prevNode, currentNode)  (AssignMem _ e) = (s, c, updatedMemory)
+updateUsingStmt s c mem (prevNode, currentNode)  (AssignMem r e) = 
+  case lookup r s of 
+    Nothing -> error ("Not defined register: " ++ show r)
+    _ -> (s, c, mem')
   where
     secLevel = processExpression s c (prevNode, currentNode)  e
-    updatedMemory = if secLevel == High then High else mem
+    mem' = if mem == High then High else secLevel
+updateUsingStmt s c mem (prevNode, currentNode)  (If cond lbl) =  
+  if secLevelExp1 == Low && secLevelExp2 == Low 
+    then (s, c, mem) 
+    else (s, (if lbl `elem` c then c else c ++ [lbl]), mem) 
+  where
+    (e1, e2) = extractExpsFromCond cond
+    secLevelExp1 = processExpression s c (prevNode, currentNode)  e1
+    secLevelExp2 = processExpression s c (prevNode, currentNode)  e2
 updateUsingStmt s c mem _ (Goto _) = (s, c, mem)  
-updateUsingStmt s c mem (prevNode, currentNode)  (If test lbl) =  
-  let 
-    (exp1, exp2) = extractExps test
-    secLevelExp1 = processExpression s c (prevNode, currentNode)  exp1
-    secLevelExp2 = processExpression s c (prevNode, currentNode)  exp2
-  in
-    if secLevelExp1 == Low && secLevelExp2 == Low then (s, c, mem) else (s, c', mem) 
-  where 
-    c' = if lbl `elem` c then c else c ++ [lbl]
-    extractExps :: Cond -> (Exp, Exp)
-    extractExps (Equal e1 e2)      = (e1, e2)
-    extractExps (NotEqual e1 e2)   = (e1, e2)
-    extractExps (LessThan e1 e2)   = (e1, e2)
-    extractExps (LessEqual e1 e2)  = (e1, e2)
-    extractExps (GreaterThan e1 e2)  = (e1, e2)
-    extractExps (GreaterEqual e1 e2) = (e1, e2)
-updateUsingStmt s c mem _ SKIP = (s, c, mem)  -- ! undefined operations do not affect
-------------------- TODO ------------------------
-
+updateUsingStmt s c mem _ SKIP = (s, c, mem)
 
 -- Process an expression, returning the security level of the expression.
 processExpression :: State -> Context -> (Int,Int) -> Exp -> SecurityLevel
@@ -79,7 +75,7 @@ processExpression s c (prevNode, currentNode) e =
               case secLevel of
                 High -> High
                 Low -> if elem prevNode c || elem currentNode c then High else Low
-            Nothing -> error "Not defined register"
+            Nothing -> error ("Not defined register: " ++ show r)
     Const _ -> 
       if elem prevNode c || elem currentNode c 
         then High 
@@ -103,6 +99,15 @@ updateRegisterSecurity r secLevel = map (\(reg, sec) ->
     if reg == r 
         then (reg, if sec == High then sec else secLevel)
         else (reg, sec))
+
+-- Extract the two expressions used in a Condition.
+extractExpsFromCond :: Cond -> (Exp, Exp)
+extractExpsFromCond (Equal e1 e2)      = (e1, e2)
+extractExpsFromCond (NotEqual e1 e2)   = (e1, e2)
+extractExpsFromCond (LessThan e1 e2)   = (e1, e2)
+extractExpsFromCond (LessEqual e1 e2)  = (e1, e2)
+extractExpsFromCond (GreaterThan e1 e2)  = (e1, e2)
+extractExpsFromCond (GreaterEqual e1 e2) = (e1, e2)
 
 -- Union of two states.
 unionStt :: State -> State -> State
