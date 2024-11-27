@@ -1,0 +1,4 @@
+Questions:
+1. How to translate Jset to an Equation
+2. In assignReg what happen if r is a high security and content is low
+3. Should I only allow a certain number of registers and what if the program uses a not defined register?

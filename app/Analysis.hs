@@ -42,18 +42,18 @@ processElement state (states, context, mem) (currentNode, ((prevNode,stmt):es)) 
 updateUsingStmt :: State -> Context -> Memory -> (Int,Int) -> Stmt -> (State, Context, Memory)
 updateUsingStmt s c mem (prevNode, currentNode) (AssignReg r e) = (updatedState, c, mem)
   where 
-    secLevel = updateUsingExp s c (prevNode, currentNode)  e
+    secLevel = processExpression s c (prevNode, currentNode)  e
     updatedState = updateRegisterSecurity r secLevel s
 updateUsingStmt s c mem (prevNode, currentNode)  (AssignMem _ e) = (s, c, updatedMemory)
   where
-    secLevel = updateUsingExp s c (prevNode, currentNode)  e
+    secLevel = processExpression s c (prevNode, currentNode)  e
     updatedMemory = if secLevel == High then High else mem
 updateUsingStmt s c mem _ (Goto _) = (s, c, mem)  
 updateUsingStmt s c mem (prevNode, currentNode)  (If test lbl) =  
   let 
     (exp1, exp2) = extractExps test
-    secLevelExp1 = updateUsingExp s c (prevNode, currentNode)  exp1
-    secLevelExp2 = updateUsingExp s c (prevNode, currentNode)  exp2
+    secLevelExp1 = processExpression s c (prevNode, currentNode)  exp1
+    secLevelExp2 = processExpression s c (prevNode, currentNode)  exp2
   in
     if secLevelExp1 == Low && secLevelExp2 == Low then (s, c, mem) else (s, c', mem) 
   where 
@@ -66,48 +66,36 @@ updateUsingStmt s c mem (prevNode, currentNode)  (If test lbl) =
     extractExps (GreaterThan e1 e2)  = (e1, e2)
     extractExps (GreaterEqual e1 e2) = (e1, e2)
 updateUsingStmt s c mem _ SKIP = (s, c, mem)  -- ! undefined operations do not affect
-
-
 ------------------- TODO ------------------------
-updateUsingExp :: State -> Context -> (Int,Int) -> Exp -> SecurityLevel
-updateUsingExp s c (prevNode, currentNode)  e = 
-  case e of
+
+
+-- Process an expression, returning the security level of the expression.
+processExpression :: State -> Context -> (Int,Int) -> Exp -> SecurityLevel
+processExpression s c (prevNode, currentNode) e = 
+  case e of 
     Register r -> 
       case lookup r s of
-        Just secLevel ->
-          case secLevel of
-            High -> High
-            Low -> if elem prevNode c || elem currentNode c then High else Low
-        Nothing -> if elem prevNode c || elem currentNode c then High else Low
-    Const _ -> if elem prevNode c || elem currentNode c then High else Low
-    AddOp e1 e2 -> 
-      let 
-        sec1 = updateUsingExp s c (prevNode, currentNode)  e1
-        sec2 = updateUsingExp s c (prevNode, currentNode)  e2
-        resultSecLevel = if sec1 == High || sec2 == High || elem prevNode c || elem currentNode c then High else Low
-      in 
-        resultSecLevel
-    SubOp e1 e2 ->  
-      let 
-        sec1 = updateUsingExp s c (prevNode, currentNode)  e1
-        sec2 = updateUsingExp s c (prevNode, currentNode)  e2
-        resultSecLevel = if sec1 == High || sec2 == High || elem prevNode c || elem currentNode c then High else Low
-      in 
-        resultSecLevel
-    MulOp e1 e2 ->  
-      let 
-        sec1 = updateUsingExp s c (prevNode, currentNode)  e1
-        sec2 = updateUsingExp s c (prevNode, currentNode)  e2
-        resultSecLevel = if sec1 == High || sec2 == High || elem prevNode c || elem currentNode c then High else Low
-      in 
-        resultSecLevel 
-    DivOp e1 e2 ->  
-      let 
-        sec1 = updateUsingExp s c (prevNode, currentNode)  e1
-        sec2 = updateUsingExp s c (prevNode, currentNode)  e2
-        resultSecLevel = if sec1 == High || sec2 == High || elem prevNode c || elem currentNode c then High else Low
-      in 
-        resultSecLevel 
+            Just secLevel ->
+              case secLevel of
+                High -> High
+                Low -> if elem prevNode c || elem currentNode c then High else Low
+            Nothing -> error "Not defined register"
+    Const _ -> 
+      if elem prevNode c || elem currentNode c 
+        then High 
+        else Low
+    AddOp e1 e2 -> processBinOp s c (prevNode, currentNode)  e1 e2
+    SubOp e1 e2 -> processBinOp s c (prevNode, currentNode)  e1 e2
+    MulOp e1 e2 -> processBinOp s c (prevNode, currentNode)  e1 e2
+    DivOp e1 e2 -> processBinOp s c (prevNode, currentNode)  e1 e2
+
+-- Processes a binary operation, returning the security level.
+processBinOp :: State -> Context -> (Int,Int) -> Exp -> Exp -> SecurityLevel
+processBinOp s c (prevNode, currentNode) e1 e2 = 
+  let sec1 = processExpression s c (prevNode, currentNode)  e1
+      sec2 = processExpression s c (prevNode, currentNode)  e2
+      resultSecLevel = if sec1 == High || sec2 == High || elem prevNode c || elem currentNode c then High else Low
+      in resultSecLevel
 
 -- Update the register security in a state.
 updateRegisterSecurity :: Reg -> SecurityLevel -> State -> State
@@ -115,7 +103,6 @@ updateRegisterSecurity r secLevel = map (\(reg, sec) ->
     if reg == r 
         then (reg, if sec == High then sec else secLevel)
         else (reg, sec))
-
 
 -- Union of two states.
 unionStt :: State -> State -> State
