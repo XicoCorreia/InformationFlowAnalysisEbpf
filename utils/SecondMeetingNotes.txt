@@ -1,8 +1,12 @@
 Questions:
 1. How to translate Jset to an Equation
+signed equal
 2. In assignReg what happen if r index is a high security and content is low
+Yes
 3. Should I only allow a certain number of registers and what if the program uses a not defined register?
+Only 11 registers and 512 mem cells
 4. How would I incorporate interval analysis, run both analysis at the same time?
+Run first -> Then use the information for the information flow analysis
 
 Dominance Frontier:
 Dominator -> If I want to go from start to n, I always pass a, a dominates n
@@ -14,3 +18,8 @@ Dominance frontier ->
 - If a node in your control flow graph has less than 2 predecessors, then it won't be in the dominance frontier 
   of any node - as it cannot be a merge point for competing definitions.
 - It is where the dominance of some nodes end
+
+Domiance frontiers work as limits for the nodes that rely on the secret, if inside the body it relies, otherwise it is not
+
+Work more around post dominance, so if it is poost frontier + post dominance do not care
+
