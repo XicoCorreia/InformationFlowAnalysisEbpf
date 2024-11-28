@@ -1,5 +1,6 @@
 TODO Coding
 1. Fix Jumps
+2. Write more tests
 
 TODO Reading
 1. Read more about ebpf, dive into
