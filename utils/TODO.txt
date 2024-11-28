@@ -5,6 +5,7 @@ TODO Coding
 TODO Reading
 1. Read more about ebpf, dive into
 2. Write ebpf flow anaylysis formal definition
+3. Message mathilde ku phd
 
 TODO Report
 1. Start Report structure
