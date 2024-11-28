@@ -2,3 +2,15 @@ Questions:
 1. How to translate Jset to an Equation
 2. In assignReg what happen if r index is a high security and content is low
 3. Should I only allow a certain number of registers and what if the program uses a not defined register?
+4. How would I incorporate interval analysis, run both analysis at the same time?
+
+Dominance Frontier:
+Dominator -> If I want to go from start to n, I always pass a, a dominates n
+Post-Dominator -> If I want to go from n to end, I always pass b, b post dominates n
+Dominance frontier -> 
+- DF of node d is the set of all nodes ni such that d dominates an immediate predecessor
+  of ni, but d does not strictly dominate ni, it is the set of nodes where d's dominance stops
+- So the dominance frontier are all the nodes executed that depend on d
+- If a node in your control flow graph has less than 2 predecessors, then it won't be in the dominance frontier 
+  of any node - as it cannot be a merge point for competing definitions.
+- It is where the dominance of some nodes end
