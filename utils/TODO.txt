@@ -2,7 +2,6 @@ TODO Coding
 3. Fix Jumps
 
 TODO Reading
-1. Learn about post dominance frontier (Post dominance node) 
 
 TODO Report
 1. Start Report structure
