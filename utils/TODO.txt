@@ -1,7 +1,9 @@
 TODO Coding
-3. Fix Jumps
+1. Fix Jumps
 
 TODO Reading
+1. Read more about ebpf, dive into
+2. Write ebpf flow anaylysis formal definition
 
 TODO Report
 1. Start Report structure
