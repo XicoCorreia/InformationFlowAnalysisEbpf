@@ -8,5 +8,5 @@ TODO Reading
 3. Message mathilde ku phd
 
 TODO Report
-1. Start Report structure
+1. Write intro report sections
 
