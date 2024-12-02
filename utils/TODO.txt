@@ -3,8 +3,6 @@ TODO Coding
 2. Write more tests
 
 TODO Reading
-1. Read more about ebpf, dive into
-2. Write ebpf flow anaylysis formal definition
 
 TODO Report
 1. Write intro report sections
