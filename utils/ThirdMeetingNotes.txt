@@ -22,3 +22,7 @@ Thesis
 - Ensure that your analysis is both sound (it doesn't miss violations) and complete (it detects all violations)
 - Fixpoint Convergence
 - Real world utility
+
+
+- Developing a novel eBPF-based taint analysis framework: This could involve tracking sensitive data (like secrets or credentials) 
+through syscalls, memory writes, and network activity
