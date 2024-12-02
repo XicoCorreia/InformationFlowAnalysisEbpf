@@ -16,3 +16,9 @@ Thesis
   - Run the kernel verifier
 - Kenny's ebpf-tools used to assemble and disassemble bytecode/asm, not yet completed
   could be interesting completing it, also quasiquote still not fully developed
+- Operational Semantics
+- Context-sensitive flow rules
+- Preserving Security Properties (Confidentiality and Integrity)
+- Ensure that your analysis is both sound (it doesn't miss violations) and complete (it detects all violations)
+- Fixpoint Convergence
+- Real world utility
