@@ -1,0 +1,13 @@
+Test analysis directly with eBPF programs
+Option 1
+- Create ebpf program in C
+- Use clang to translate it to assembly
+- If needed preprocess the assembly (use ebpf-tools?)
+- Run my analysis
+
+Option 2
+- Use clang to generate .o fike (ELF and bytecode)
+- Disassemble .o, retrieve bytecode
+- Translate it to haskell-compatible format
+- Run analysis
+- Run the kernel verifier
