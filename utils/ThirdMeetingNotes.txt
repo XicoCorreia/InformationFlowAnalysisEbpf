@@ -1,13 +1,18 @@
-Test analysis directly with eBPF programs
-Option 1
-- Create ebpf program in C
-- Use clang to translate it to assembly
-- If needed preprocess the assembly (use ebpf-tools?)
-- Run my analysis
+Questions
 
-Option 2
-- Use clang to generate .o fike (ELF and bytecode)
-- Disassemble .o, retrieve bytecode
-- Translate it to haskell-compatible format
-- Run analysis
-- Run the kernel verifier
+
+Thesis
+- Test analysis directly with eBPF programs
+- Option 1
+  - Create ebpf program in C
+  - Use clang to translate it to assembly
+  - If needed preprocess the assembly (use ebpf-tools?)
+  - Run my analysis
+- Option 2
+  - Use clang to generate .o fike (ELF and bytecode)
+  - Disassemble .o, retrieve bytecode
+  - Translate it to haskell-compatible format (use ebpf-tools?)
+  - Run analysis
+  - Run the kernel verifier
+- Kenny's ebpf-tools used to assemble and disassemble bytecode/asm, not yet completed
+  could be interesting completing it, also quasiquote still not fully developed
