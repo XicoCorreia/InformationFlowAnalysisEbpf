@@ -1,6 +1,5 @@
 TODO Coding
 1. Fix Jumps
-2. Write more tests
 
 TODO Reading
 
