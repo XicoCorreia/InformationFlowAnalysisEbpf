@@ -1,5 +1,9 @@
 Questions
+- sum_even10.asm graph
 
+Eureka
+- If there is a path from the node after a jump, back to that predecessor,
+  it relies on it, otherwise it doesn't
 
 Thesis
 - Test analysis directly with eBPF programs

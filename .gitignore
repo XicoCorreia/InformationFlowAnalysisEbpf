@@ -1,7 +1,5 @@
 /dist-newstyle/
 /newdist/
-*.dot
 *.png
-*.pdf
 /ubpf
 /.vscode
