@@ -1,23 +1,16 @@
 Questions
-- sum_even10.asm graph
-
-Eureka
-- If there is a path from the node after a jump, back to that predecessor,
-  it relies on it, otherwise it doesn't
+- Question about sum_even10.asm graph
+- Go through the two different paths, when reachs Post dominant or itself the body has stopped
+  - Itself is  obvious, we just looped
+  - PD it is a common node, always ran when going through that branch or only if it is in PD AND DF,
+  meaning the only way to reach there isnt through the secret node
+- More related to non inference, should I even care about this or is it unrelated problem:
+  - If I have a mov from a low, should I reset the security level depending on the initial?
+    Example: while (h) do { l := l+1 }; l := 0
 
 Thesis
-- Test analysis directly with eBPF programs
-- Option 1
-  - Create ebpf program in C
-  - Use clang to translate it to assembly
-  - If needed preprocess the assembly (use ebpf-tools?)
-  - Run my analysis
-- Option 2
-  - Use clang to generate .o fike (ELF and bytecode)
-  - Disassemble .o, retrieve bytecode
-  - Translate it to haskell-compatible format (use ebpf-tools?)
-  - Run analysis
-  - Run the kernel verifier
+- Developing a eBPF-based taint analysis framework: This could involve tracking sensitive data (like secrets or credentials) 
+  through syscalls, memory writes, and network activity
 - Kenny's ebpf-tools used to assemble and disassemble bytecode/asm, not yet completed
   could be interesting completing it, also quasiquote still not fully developed
 - Operational Semantics
@@ -26,7 +19,15 @@ Thesis
 - Ensure that your analysis is both sound (it doesn't miss violations) and complete (it detects all violations)
 - Fixpoint Convergence
 - Real world utility
-
-
-- Developing a novel eBPF-based taint analysis framework: This could involve tracking sensitive data (like secrets or credentials) 
-through syscalls, memory writes, and network activity
+- How to run Test analysis directly with eBPF programs
+  - Option 1
+    - Create ebpf program in C
+    - Use clang to translate it to assembly
+    - If needed preprocess the assembly (use ebpf-tools?)
+    - Run my analysis
+  - Option 2
+    - Use clang to generate .o fike (ELF and bytecode)
+    - Disassemble .o, retrieve bytecode
+    - Translate it to haskell-compatible format (use ebpf-tools?)
+    - Run analysis
+    - Run the kernel verifier
