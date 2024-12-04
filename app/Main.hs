@@ -122,7 +122,7 @@ main = do
           let equations = cfgToEquations edges (Map.empty)
           printf "\nEquations:\n"
           putStrLn $ formatMap equations
-          let states = informationFlowAnalysis equations initialState 
+          let (states, _, _) = informationFlowAnalysis edges equations initialState 
           printf "\nFinal states:\n"  
           mapM_ printWithIndex (zip ([0..] :: [Int]) states) 
     _ -> do

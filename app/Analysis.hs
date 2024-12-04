@@ -1,96 +1,110 @@
 module Analysis (informationFlowAnalysis) where
 
 import qualified Data.Map as Map
+import qualified Data.Set as Set
+import Data.List (find)
+
+import Data.Graph.Dom as Dom
+import Data.Graph as G
 
 import Types
 import Ebpf.Asm
 
+
 -- Perform a the information flow  analysis on a set of equations.
-informationFlowAnalysis :: Equations -> State -> [State]
-informationFlowAnalysis e initialState =
-  fixpointComputation (replicate ((length e) + 1) initialState, [], Low) (Map.toList e)
+informationFlowAnalysis :: CFG -> Equations -> State -> SystemState
+informationFlowAnalysis cfg eq initialState =
+  fixpointComputation (graphG, graphDom) (replicate ((length eq) + 1) initialState, Low, Set.empty) (Map.toList eq)
+      where 
+      lastNode = length eq
+      edgesList = [(from, to) | (from, _, to) <- Set.toList cfg]
+      graphDom = (lastNode, Dom.fromEdges edgesList)
+      graphG = G.buildG (0, lastNode) edgesList
 
 -- Perform fixpoint computation for the analysis.
-fixpointComputation :: SystemState -> [(Label, [(Label, Stmt)])] -> [State]
-fixpointComputation ss eq = 
-  if ss == (state', context', memory') 
-    then state'
-    else fixpointComputation (state', context', memory') eq
+fixpointComputation :: (G.Graph, Dom.Rooted) -> SystemState -> [(Label, [(Label, Stmt)])] -> SystemState 
+fixpointComputation graphs ss eq = 
+  if ss == ss'
+    then ss'
+    else fixpointComputation graphs ss' eq
       where 
-        (state', context', memory') = foldl updateSystemState ss eq
+        ss' = foldl (updateSystemState graphs) ss eq
 
 -- This function updates the System state with a new state for the node being processed.
-updateSystemState ::  SystemState -> (Label, [(Label, Stmt)]) -> SystemState
-updateSystemState (states, context, mem) (nodeIdx, eqs) = 
-  (before ++ [state'] ++ after , context', mem')
+updateSystemState :: (G.Graph, Dom.Rooted) -> SystemState -> (Label, [(Label, Stmt)]) -> SystemState
+updateSystemState graphs (states, mem, jumps) (nodeIdx, eqs) = 
+  (before ++ [state'] ++ after, mem', jumps')
   where
     startState = states !! nodeIdx
-    (state', context', mem') = processElement startState (states, context, mem) (nodeIdx, eqs)
+    (state', mem', jumps') = processElement graphs startState (states, mem, jumps) (nodeIdx, eqs)
     before = take nodeIdx states 
     after = drop (nodeIdx + 1) states
     
 -- Processes the equations for a specific node, returning the updated state.     
-processElement :: State -> SystemState -> (Label, [(Label, Stmt)]) -> (State, Context, Memory)
-processElement state (_, c, m) (_,[]) = (state, c, m)
-processElement state (states, context, mem) (currentNode, ((prevNode,stmt):es)) = otherState
+processElement :: (G.Graph, Dom.Rooted) -> State -> SystemState -> (Label, [(Label, Stmt)]) -> (State, Memory, HighSecurityJumps)
+processElement _ state (_, m, j) (_,[]) = (state, m, j)
+processElement graphs state (states, mem, jumps) (currentNode, ((prevNode, stmt):es)) = otherState
   where 
-    (state', context', mem') = updateUsingStmt (states !! prevNode) context mem (prevNode, currentNode) stmt 
+    dependsOnJump = isDependent graphs currentNode (Set.toList jumps)
+    prevState = (states !! prevNode)
+    (state',  mem', jumps') = updateUsingStmt prevState mem jumps dependsOnJump (prevNode, currentNode) stmt 
     newState = unionStt state state'
-    otherState = processElement newState (states, context', mem') (currentNode, es)
+    otherState = processElement graphs newState (states,  mem', jumps') (currentNode, es)
 
 -- Update a node's state by analysing the security level of an equation.
-updateUsingStmt :: State -> Context -> Memory -> (Int,Int) -> Stmt -> (State, Context, Memory)
-updateUsingStmt s c mem (prevNode, currentNode) (AssignReg r e) = 
-  case lookup r s of 
+updateUsingStmt :: State -> Memory -> HighSecurityJumps -> Bool -> (Int,Int) -> Stmt -> (State, Memory, HighSecurityJumps)
+updateUsingStmt state mem jumps dependOnJump (prevNode, currentNode) (AssignReg r e) = 
+  case lookup r state of 
     Nothing -> error ("Not defined register: " ++ show r)
-    _ -> (updatedState, c, mem)
+    _ -> (updatedState, mem, jumps)
   where 
-    secLevel = processExpression s c (prevNode, currentNode) e
-    updatedState = updateRegisterSecurity r secLevel s
-updateUsingStmt s c mem (prevNode, currentNode)  (AssignMem r e) = 
-  case lookup r s of 
+    secLevel = 
+      if dependOnJump 
+        then High 
+        else processExpression state (prevNode, currentNode) e
+    updatedState = updateRegisterSecurity r secLevel state
+updateUsingStmt state mem jumps dependOnJump (prevNode, currentNode) (AssignMem r e) = 
+  case lookup r state of 
     Nothing -> error ("Not defined register: " ++ show r)
-    _ -> (s, c, mem')
+    _ -> (state, mem', jumps)
   where
-    secLevel = processExpression s c (prevNode, currentNode)  e
+    secLevel = 
+      if dependOnJump 
+        then High 
+        else processExpression state (prevNode, currentNode) e
     mem' = if mem == High then High else secLevel
-updateUsingStmt s c mem (prevNode, currentNode)  (If cond lbl) =  
-  if secLevelExp1 == Low && secLevelExp2 == Low 
-    then (s, c, mem) 
-    else (s, (if lbl `elem` c then c else c ++ [lbl]), mem) 
+updateUsingStmt state mem jumps dependOnJump (prevNode, currentNode) (If cond _) =  
+  if secLevelCond == High || dependOnJump 
+    then (state, mem, Set.insert prevNode jumps)
+    else (state, mem, jumps)
   where
     (e1, e2) = extractExpsFromCond cond
-    secLevelExp1 = processExpression s c (prevNode, currentNode)  e1
-    secLevelExp2 = processExpression s c (prevNode, currentNode)  e2
-updateUsingStmt s c mem _ (Goto _) = (s, c, mem)  
-updateUsingStmt s c mem _ SKIP = (s, c, mem)
+    secLevelExp1 = processExpression state (prevNode, currentNode)  e1
+    secLevelExp2 = processExpression state (prevNode, currentNode)  e2
+    secLevelCond = if secLevelExp1 == Low && secLevelExp2 == Low then Low else High
+updateUsingStmt state mem jumps _ _ (Goto _) = (state, mem, jumps)  
+updateUsingStmt state mem jumps _ _ SKIP = (state, mem, jumps)
 
 -- Process an expression, returning the security level of the expression.
-processExpression :: State -> Context -> (Int,Int) -> Exp -> SecurityLevel
-processExpression s c (prevNode, currentNode) e = 
+processExpression :: State -> (Int,Int) -> Exp -> SecurityLevel
+processExpression state (prevNode, currentNode) e = 
   case e of 
     Register r -> 
-      case lookup r s of
-            Just secLevel ->
-              case secLevel of
-                High -> High
-                Low -> if elem prevNode c || elem currentNode c then High else Low
-            Nothing -> error ("Not defined register: " ++ show r)
-    Const _ -> 
-      if elem prevNode c || elem currentNode c 
-        then High 
-        else Low
-    AddOp e1 e2 -> processBinOp s c (prevNode, currentNode)  e1 e2
-    SubOp e1 e2 -> processBinOp s c (prevNode, currentNode)  e1 e2
-    MulOp e1 e2 -> processBinOp s c (prevNode, currentNode)  e1 e2
-    DivOp e1 e2 -> processBinOp s c (prevNode, currentNode)  e1 e2
+      case lookup r state of
+            Just secLevel -> secLevel
+            Nothing -> error ("Not allowed to use register: " ++ show r)
+    Const _ -> Low
+    AddOp e1 e2 -> processBinOp state (prevNode, currentNode)  e1 e2
+    SubOp e1 e2 -> processBinOp state (prevNode, currentNode)  e1 e2
+    MulOp e1 e2 -> processBinOp state (prevNode, currentNode)  e1 e2
+    DivOp e1 e2 -> processBinOp state (prevNode, currentNode)  e1 e2
 
 -- Processes a binary operation, returning the security level.
-processBinOp :: State -> Context -> (Int,Int) -> Exp -> Exp -> SecurityLevel
-processBinOp s c (prevNode, currentNode) e1 e2 = 
-  let sec1 = processExpression s c (prevNode, currentNode)  e1
-      sec2 = processExpression s c (prevNode, currentNode)  e2
-      resultSecLevel = if sec1 == High || sec2 == High || elem prevNode c || elem currentNode c then High else Low
+processBinOp :: State -> (Int,Int) -> Exp -> Exp -> SecurityLevel
+processBinOp state (prevNode, currentNode) e1 e2 = 
+  let sec1 = processExpression state (prevNode, currentNode)  e1
+      sec2 = processExpression state (prevNode, currentNode)  e2
+      resultSecLevel = if sec1 == High || sec2 == High then High else Low
       in resultSecLevel
 
 -- Update the register security in a state.
@@ -114,3 +128,17 @@ unionStt :: State -> State -> State
 unionStt = zipWith combine
   where
     combine (reg, sec1) (_, sec2) = (reg, if sec1 == High || sec2 == High then High else Low)
+
+-- Check wheter a node is reachable from a conditional jump and if it is a post dominant node.
+-- If it is reachable and does not post dominates one of the nodes containing a conditional jump,
+-- it is considered dependent, meaning it relies on a secret condition.
+isDependent :: (G.Graph, Dom.Rooted) -> Label -> [Int] -> Bool
+isDependent _ _ [] = False
+isDependent (graphG, graphDom) currentNode (x:xs) = 
+  if currentNode `elem` (G.reachable graphG x) && not (currentNode `elem` postDoms)  
+    then True
+    else isDependent (graphG, graphDom) currentNode xs
+  where
+    postDoms = case find (\(n, _) -> n == currentNode) (pdom graphDom) of
+      Just (_, pd) -> pd 
+      Nothing       -> [] 

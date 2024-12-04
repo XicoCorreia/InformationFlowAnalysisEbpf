@@ -1,7 +1,7 @@
 module Types where
 
-import Data.Set (Set)
-import Data.Map (Map)
+import Data.Set as Set
+import Data.Map as Map
 import Ebpf.Asm
 
 ------------------- CFG Types ------------------------
@@ -50,5 +50,6 @@ data SecurityLevel = High | Low
 
 type State = [(Reg, SecurityLevel)]
 type Memory = SecurityLevel
-type Context = [Int]
-type SystemState = ([State], Context, Memory)
+type HighSecurityJumps = Set.Set Int 
+
+type SystemState = ([State], Memory, HighSecurityJumps)
