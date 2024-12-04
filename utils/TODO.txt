@@ -1,5 +1,4 @@
 TODO Coding
-1. Fix Jumps
 
 TODO Reading
 

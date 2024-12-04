@@ -1,5 +1,9 @@
+Status update
+- Everything should be working
+
 Questions
 - Question about sum_even10.asm graph
+- Would node 3 depend on five
 - Go through the two different paths, when reachs Post dominant or itself the body has stopped
   - Itself is  obvious, we just looped
   - PD it is a common node, always ran when going through that branch or only if it is in PD AND DF,
