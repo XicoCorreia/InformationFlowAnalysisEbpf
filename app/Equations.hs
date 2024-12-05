@@ -30,7 +30,7 @@ assertToCond cmp r ri = case cmp of
   Jsge -> GreaterEqual exp1 exp2
   Jslt -> LessThan exp1 exp2
   Jsle -> LessEqual exp1 exp2
-  Jset -> error "JSET not supported"
+  Jset -> Equal exp1 exp2
   where
     exp1 = Register r
     exp2 = regOrConstant ri
@@ -42,6 +42,9 @@ opToStmt (Binary _ op r ri) = AssignReg r $ case op of
   Sub -> SubOp exp1 exp2
   Mul -> MulOp exp1 exp2
   Div -> DivOp exp1 exp2
+  Mod -> ModOp exp1 exp2
+  And -> AndOp exp1 exp2
+  Or -> OrOp exp1 exp2
   Mov -> exp2
   _   -> error "Unsupported binary operation"
   where

@@ -23,6 +23,10 @@ data Exp =
   | SubOp Exp Exp
   | MulOp Exp Exp  
   | DivOp Exp Exp  
+  | ModOp Exp Exp
+  | AndOp Exp Exp
+  | OrOp Exp Exp
+
     deriving (Show)
 
 data Cond = 

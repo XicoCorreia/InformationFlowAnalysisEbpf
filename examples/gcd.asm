@@ -11,5 +11,5 @@
     mod r0, r1       ; b = a % b
     mov r1, r0       ; a = temp
     mov r0, r2       ; a = temp
-    jnz r1, +-5      ; while b != 0
+    jne r1, 0, +-5      ; while b != 0
     exit

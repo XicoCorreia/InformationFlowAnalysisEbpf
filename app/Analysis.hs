@@ -98,6 +98,10 @@ processExpression state (prevNode, currentNode) e =
     SubOp e1 e2 -> processBinOp state (prevNode, currentNode)  e1 e2
     MulOp e1 e2 -> processBinOp state (prevNode, currentNode)  e1 e2
     DivOp e1 e2 -> processBinOp state (prevNode, currentNode)  e1 e2
+    ModOp e1 e2 -> processBinOp state (prevNode, currentNode)  e1 e2
+    AndOp e1 e2 -> processBinOp state (prevNode, currentNode)  e1 e2
+    OrOp e1 e2 -> processBinOp state (prevNode, currentNode)  e1 e2
+
 
 -- Processes a binary operation, returning the security level.
 processBinOp :: State -> (Int,Int) -> Exp -> Exp -> SecurityLevel

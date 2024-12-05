@@ -6,11 +6,13 @@
 ;         max = array[i]
     mov r0, 3       ; max = array[0]
     mov r1, 7       ; array[1]
-    cmp r1, r0      ; compare array[1] with max
-    jle +2          ; if not greater, skip
+    sub r1, r0      ; r1 = array[1] - max
+    mov r2, r1      ; r2 = array[1] - max
+    jlt r2, 0, +2   ; if r2 < 0 jump (r1 is not greater than r0)
     mov r0, r1      ; update max to array[1]
     mov r1, 2       ; array[2]
-    cmp r1, r0      ; compare array[2] with max
-    jle +2          ; if not greater, skip
+    sub r1, r0      ; r1 = array[2] - max
+    mov r2, r1      ; r2 = array[2] - max
+    jlt r2, 0, +2   ; if r2 < 0 jump (r1 is not greater than r0)
     mov r0, r1      ; update max to array[2]
     exit
