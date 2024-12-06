@@ -3,7 +3,9 @@ Status update
 
 Questions
 - Question about sum_even10.asm graph
+  - Correct idea
 - Would node 3 depend on five
+  - Yes
 - Go through the two different paths, when reachs Post dominant or itself the body has stopped
   - Itself is  obvious, we just looped
   - PD it is a common node, always ran when going through that branch or only if it is in PD AND DF,
@@ -11,6 +13,7 @@ Questions
 - More related to non inference, should I even care about this or is it unrelated problem:
   - If I have a mov from a low, should I reset the security level depending on the initial?
     Example: while (h) do { l := l+1 }; l := 0
+    - Fix it, it should reset yes
 
 Thesis
 - Developing a eBPF-based taint analysis framework: This could involve tracking sensitive data (like secrets or credentials) 
