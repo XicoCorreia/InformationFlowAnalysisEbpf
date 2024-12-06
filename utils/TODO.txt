@@ -1,7 +1,8 @@
 TODO Coding
-
+- Better Tests (write programs and analyse the graphs taking into account the secrets)
+- Update mov resets the low security
 TODO Reading
 
 TODO Report
-1. Write intro report sections
+1. Write report
 
