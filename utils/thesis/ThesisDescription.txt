@@ -21,5 +21,11 @@ This research addresses a critical gap in eBPF studies, offering both theoretica
 flow security and practical tools for enhancing eBPF's safety in production environments.
 
 
+Learning goals
+- Being able to formalize the analysis
+- Prove the soundness mathematical semantics
+- Design fixpoint based solution
+- Implement the taint analysis
+- Being able to test in real world scenraiso
 
 
