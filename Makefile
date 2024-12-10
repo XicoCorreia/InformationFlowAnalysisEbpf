@@ -1,14 +1,10 @@
 CABAL_CMD = cabal run ebpf-cfg --
-EXAMPLES = examples/add.asm \
-           examples/sum_five.asm \
-           examples/count_bits.asm \
-           examples/factorial5.asm \
-           examples/gcd.asm \
-           examples/max_value.asm \
-           examples/sum_digits.asm \
-           examples/sum_even10.asm
+EXAMPLES = examples/sumFive.asm \
+           examples/doWhile.asm \
+           examples/whileLoop.asm \
+           examples/ifStatement.asm \
 
-EXAMPLE_NAME = add
+EXAMPLE_NAME = sumFive
 
 # Default target
 all: run-tests
