@@ -3,6 +3,7 @@ EXAMPLES = examples/sumFive.asm \
            examples/doWhile.asm \
            examples/whileLoop.asm \
            examples/ifStatement.asm \
+		   examples/nestedIfLoop.asm \
 
 EXAMPLE_NAME = sumFive
 
