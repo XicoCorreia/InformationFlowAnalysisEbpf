@@ -92,8 +92,9 @@ processExpression state (prevNode, currentNode) e =
     Register r -> 
       case lookup r state of
             Just secLevel -> secLevel
-            Nothing -> error ("Not allowed to use register: " ++ show r)
+            Nothing -> error ("Not defined register: " ++ show r)
     Const _ -> Low
+    -- In the case it is a binOp both expressions are checked
     AddOp e1 e2 -> processBinOp state (prevNode, currentNode)  e1 e2
     SubOp e1 e2 -> processBinOp state (prevNode, currentNode)  e1 e2
     MulOp e1 e2 -> processBinOp state (prevNode, currentNode)  e1 e2
@@ -115,7 +116,7 @@ processBinOp state (prevNode, currentNode) e1 e2 =
 updateRegisterSecurity :: Reg -> SecurityLevel -> State -> State
 updateRegisterSecurity r secLevel = map (\(reg, sec) -> 
     if reg == r 
-        then (reg, if sec == High then sec else secLevel)
+        then (reg, secLevel)
         else (reg, sec))
 
 -- Extract the two expressions used in a Condition.
