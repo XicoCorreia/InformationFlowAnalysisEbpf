@@ -45,7 +45,7 @@ processElement :: (G.Graph, Dom.Rooted) -> State -> SystemState -> (Label, [(Lab
 processElement _ state (_, m, j) (_,[]) = (state, m, j)
 processElement graphs state (states, mem, jumps) (currentNode, ((prevNode, stmt):es)) = otherState
   where 
-    dependsOnJump = isDependent graphs currentNode (Set.toList jumps)
+    dependsOnJump = isDependent graphs prevNode (Set.toList jumps)
     prevState = (states !! prevNode)
     (state',  mem', jumps') = updateUsingStmt prevState mem jumps dependsOnJump (prevNode, currentNode) stmt 
     newState = unionStt state state'
@@ -139,11 +139,11 @@ unionStt = zipWith combine
 -- it is considered dependent, meaning it relies on a secret condition.
 isDependent :: (G.Graph, Dom.Rooted) -> Label -> [Int] -> Bool
 isDependent _ _ [] = False
-isDependent (graphG, graphDom) currentNode (x:xs) = 
-  if currentNode `elem` (G.reachable graphG x) && not (currentNode `elem` postDoms)  
+isDependent (graphG, graphDom) prevNode (x:xs) = 
+  if (prevNode `elem` (G.reachable graphG x)) && not (prevNode `elem` postDoms) 
     then True
-    else isDependent (graphG, graphDom) currentNode xs
+    else isDependent (graphG, graphDom) prevNode xs
   where
-    postDoms = case find (\(n, _) -> n == currentNode) (pdom graphDom) of
+    postDoms = case find (\(n, _) -> n == x) (pdom graphDom) of
       Just (_, pd) -> pd 
       Nothing       -> [] 
