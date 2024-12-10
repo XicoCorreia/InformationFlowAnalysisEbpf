@@ -3,7 +3,11 @@ module Main where
 
 import Types
 import Equations
+import Data.List (find)
 import Analysis
+
+import Data.Graph.Dom as Dom
+import Data.Graph as G
 
 import qualified System.Environment as Sys
 import qualified Data.Set as Set
@@ -122,9 +126,22 @@ main = do
           let equations = cfgToEquations edges (Map.empty)
           printf "\nEquations:\n"
           putStrLn $ formatMap equations
-          let (states, _, _) = informationFlowAnalysis edges equations initialState 
+          let (states, _, x) = informationFlowAnalysis edges equations initialState 
           printf "\nFinal states:\n"  
-          mapM_ printWithIndex (zip ([0..] :: [Int]) states) 
+          mapM_ printWithIndex (zip ([0..] :: [Int]) states)
+          let lastNode = length equations
+          let edgesList = [(from, to) | (from, _, to) <- Set.toList edges]
+          let graphDom = (lastNode, Dom.fromEdges edgesList)
+          let graphG = G.buildG (0, lastNode) edgesList
+          let a = pdom graphDom
+          case find (\(n, _) -> n == 4) a of
+            Nothing -> do printf "\nFinal states:\n"
+            Just (_,postDoms) -> do
+              printf $ show (2 `elem` (G.reachable graphG 4)) 
+              printf $ show $ not (2 `elem` postDoms)
+              printf $ (show x) ++ "\n"
+              printf $ show a
+ 
     _ -> do
       putStrLn "Usage:"
       putStrLn "- Create CFG in dot file:\n <EBPF_FILE> <DOT_FILE>"

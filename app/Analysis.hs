@@ -43,9 +43,14 @@ updateSystemState graphs (states, mem, jumps) (nodeIdx, eqs) =
 -- Processes the equations for a specific node, returning the updated state.     
 processElement :: (G.Graph, Dom.Rooted) -> State -> SystemState -> (Label, [(Label, Stmt)]) -> (State, Memory, HighSecurityJumps)
 processElement _ state (_, m, j) (_,[]) = (state, m, j)
-processElement graphs state (states, mem, jumps) (currentNode, ((prevNode, stmt):es)) = otherState
+processElement graphs state (states, mem, jumps) (currentNode, ((prevNode, stmt):es)) = 
+  if currentNode == 2 && dependsOnJump == True
+    then
+      error (show states ++ "\n" ++ show dependsOnJump)
+    else otherState
   where 
     dependsOnJump = isDependent graphs prevNode (Set.toList jumps)
+    
     prevState = (states !! prevNode)
     (state',  mem', jumps') = updateUsingStmt prevState mem jumps dependsOnJump (prevNode, currentNode) stmt 
     newState = unionStt state state'
