@@ -137,32 +137,15 @@ unionStt = zipWith combine
 -- Check wheter a node is reachable from a conditional jump and if it is a post dominant node.
 -- If it is reachable and does not post dominates one of the nodes containing a conditional jump,
 -- it is considered dependent, meaning it relies on a secret condition.
--- Check wheter a node is reachable from a conditional jump and if it is a post dominant node.
--- If it is reachable and does not post dominates one of the nodes containing a conditional jump,
--- it is considered dependent, meaning it relies on a secret condition.
--- isDependent :: (G.Graph, Dom.Rooted) -> Label -> [Int] -> Bool
--- isDependent _ _ [] = False
--- isDependent (graphG, graphDom) prevNode (x:xs) = 
---   if (prevNode `elem` (G.reachable graphG x)) && not (prevNode `elem` postDoms) && not ((any (prevNode `elem`) reachableFromPostDoms))
---     then True
---     else isDependent (graphG, graphDom) prevNode xs
---   where
---     postDoms = case find (\(n, _) -> n == x) (pdom graphDom) of
---       Just (_, pd) -> pd 
---       Nothing      -> [] 
---     reachableFromPostDoms = map (G.reachable graphG) postDoms
-
-
 isDependent :: (G.Graph, Dom.Rooted) -> (Label,Label) -> [Int] -> Bool
 isDependent _ _ [] = False
 isDependent (graphG, graphDom) (prevNode,currentNode) (x:xs) = 
-  if (prevNode `elem` (G.reachable graphG x)) 
-      && currentNode <= postDoms 
-      && postDoms /= -1
-    then True
-    else isDependent (graphG, graphDom) (prevNode,currentNode) xs
-  where
-    postDoms = case find (\(n, _) -> n == x) (ipdom graphDom) of
-      Just (_, pd) -> pd 
-      Nothing      -> -1 
-
+  case find (\(n, _) -> n == x) (ipdom graphDom) of 
+    Just (_, nodePD) ->
+      if (prevNode `elem` (G.reachable graphG x)) 
+          && currentNode <= nodePD 
+          && nodePD /= -1
+          && not ((prevNode `elem` (G.reachable graphG nodePD)) && currentNode <= x)
+        then True
+        else isDependent (graphG, graphDom) (prevNode,currentNode) xs
+    Nothing -> isDependent (graphG, graphDom) (prevNode,currentNode) xs

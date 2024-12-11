@@ -1,13 +1,13 @@
 CABAL_CMD = cabal run ebpf-cfg --
-EXAMPLES = examples/sumFive.asm \
-           examples/doWhile.asm \
+EXAMPLES = examples/doWhile.asm \
            examples/whileLoop.asm \
            examples/ifStatement.asm \
 		   examples/nestedIfLoop.asm \
 		   examples/nestedWhiles.asm \
 		   examples/seqWhiles.asm \
+		   examples/doWhileIfNested.asm \
 
-EXAMPLE_NAME = sumFive
+EXAMPLE_NAME = doWhile
 
 # Default target
 all: run-tests
@@ -19,9 +19,8 @@ build:
 # Run the program for each example
 run-tests: build
 	@for file in $(EXAMPLES); do \
-		echo "Running $$file"; \
+		echo "\n-----------------------Running $$file-----------------------"; \
 		$(CABAL_CMD) $$file; \
-		echo "----------------\\\\----------------"; \
 	done
 
 run-test:
