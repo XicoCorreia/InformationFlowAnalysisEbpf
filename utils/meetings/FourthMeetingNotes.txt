@@ -1,0 +1,7 @@
+Questions
+- Nested if loop graph check
+- Problem to assigning secrets during program?
+- Show report structure
+
+Thesis
+- Show description and get the approvement
