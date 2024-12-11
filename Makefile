@@ -5,6 +5,7 @@ EXAMPLES = examples/sumFive.asm \
            examples/ifStatement.asm \
 		   examples/nestedIfLoop.asm \
 		   examples/nestedWhiles.asm \
+		   examples/seqWhiles.asm \
 
 EXAMPLE_NAME = sumFive
 
@@ -20,6 +21,7 @@ run-tests: build
 	@for file in $(EXAMPLES); do \
 		echo "Running $$file"; \
 		$(CABAL_CMD) $$file; \
+		echo "----------------\\\\----------------"; \
 	done
 
 run-test:

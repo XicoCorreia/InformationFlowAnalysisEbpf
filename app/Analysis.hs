@@ -45,7 +45,7 @@ processElement :: (G.Graph, Dom.Rooted) -> State -> SystemState -> (Label, [(Lab
 processElement _ state (_, m, j) (_,[]) = (state, m, j)
 processElement graphs state (states, mem, jumps) (currentNode, ((prevNode, stmt):es)) = otherState
   where 
-    dependsOnJump = isDependent graphs prevNode (Set.toList jumps)
+    dependsOnJump = isDependent graphs (prevNode,currentNode) (Set.toList jumps)
     prevState = (states !! prevNode)
     (state',  mem', jumps') = updateUsingStmt prevState mem jumps dependsOnJump (prevNode, currentNode) stmt 
     newState = unionStt state state'
@@ -137,13 +137,32 @@ unionStt = zipWith combine
 -- Check wheter a node is reachable from a conditional jump and if it is a post dominant node.
 -- If it is reachable and does not post dominates one of the nodes containing a conditional jump,
 -- it is considered dependent, meaning it relies on a secret condition.
-isDependent :: (G.Graph, Dom.Rooted) -> Label -> [Int] -> Bool
+-- Check wheter a node is reachable from a conditional jump and if it is a post dominant node.
+-- If it is reachable and does not post dominates one of the nodes containing a conditional jump,
+-- it is considered dependent, meaning it relies on a secret condition.
+-- isDependent :: (G.Graph, Dom.Rooted) -> Label -> [Int] -> Bool
+-- isDependent _ _ [] = False
+-- isDependent (graphG, graphDom) prevNode (x:xs) = 
+--   if (prevNode `elem` (G.reachable graphG x)) && not (prevNode `elem` postDoms) && not ((any (prevNode `elem`) reachableFromPostDoms))
+--     then True
+--     else isDependent (graphG, graphDom) prevNode xs
+--   where
+--     postDoms = case find (\(n, _) -> n == x) (pdom graphDom) of
+--       Just (_, pd) -> pd 
+--       Nothing      -> [] 
+--     reachableFromPostDoms = map (G.reachable graphG) postDoms
+
+
+isDependent :: (G.Graph, Dom.Rooted) -> (Label,Label) -> [Int] -> Bool
 isDependent _ _ [] = False
-isDependent (graphG, graphDom) prevNode (x:xs) = 
-  if (prevNode `elem` (G.reachable graphG x)) && not (prevNode `elem` postDoms) 
+isDependent (graphG, graphDom) (prevNode,currentNode) (x:xs) = 
+  if (prevNode `elem` (G.reachable graphG x)) 
+      && currentNode <= postDoms 
+      && postDoms /= -1
     then True
-    else isDependent (graphG, graphDom) prevNode xs
+    else isDependent (graphG, graphDom) (prevNode,currentNode) xs
   where
-    postDoms = case find (\(n, _) -> n == x) (pdom graphDom) of
+    postDoms = case find (\(n, _) -> n == x) (ipdom graphDom) of
       Just (_, pd) -> pd 
-      Nothing       -> [] 
+      Nothing      -> -1 
+
