@@ -4,6 +4,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.List (find)
 
+
 import Data.Graph.Dom as Dom
 import Data.Graph as G
 
@@ -20,6 +21,7 @@ informationFlowAnalysis cfg eq initialState =
       edgesList = [(from, to) | (from, _, to) <- Set.toList cfg]
       graphDom = (lastNode, Dom.fromEdges edgesList)
       graphG = G.buildG (0, lastNode) edgesList
+
 
 -- Perform fixpoint computation for the analysis.
 fixpointComputation :: (G.Graph, Dom.Rooted) -> SystemState -> [(Label, [(Label, Stmt)])] -> SystemState 
@@ -45,6 +47,7 @@ processElement :: (G.Graph, Dom.Rooted) -> State -> SystemState -> (Label, [(Lab
 processElement _ state (_, m, j) (_,[]) = (state, m, j)
 processElement graphs state (states, mem, jumps) (currentNode, ((prevNode, stmt):es)) = otherState
   where 
+    -- TODO
     dependsOnJump = isDependent graphs (prevNode,currentNode) (Set.toList jumps)
     prevState = (states !! prevNode)
     (state',  mem', jumps') = updateUsingStmt prevState mem jumps dependsOnJump (prevNode, currentNode) stmt 
@@ -53,28 +56,29 @@ processElement graphs state (states, mem, jumps) (currentNode, ((prevNode, stmt)
 
 -- Update a node's state by analysing the security level of an equation.
 updateUsingStmt :: State -> Memory -> HighSecurityJumps -> Bool -> (Int,Int) -> Stmt -> (State, Memory, HighSecurityJumps)
-updateUsingStmt state mem jumps dependOnJump (prevNode, currentNode) (AssignReg r e) = 
+updateUsingStmt state mem jumps dependsOnJump (prevNode, currentNode) (AssignReg r e) = 
   case lookup r state of 
     Nothing -> error ("Not defined register: " ++ show r)
     _ -> (updatedState, mem, jumps)
   where 
     secLevel = 
-      if dependOnJump 
+      if dependsOnJump 
         then High 
         else processExpression state (prevNode, currentNode) e
     updatedState = updateRegisterSecurity r secLevel state
-updateUsingStmt state mem jumps dependOnJump (prevNode, currentNode) (AssignMem r e) = 
+updateUsingStmt state mem jumps dependsOnJump (prevNode, currentNode) (AssignMem r e) = 
   case lookup r state of 
     Nothing -> error ("Not defined register: " ++ show r)
     _ -> (state, mem', jumps)
   where
     secLevel = 
-      if dependOnJump 
+      if dependsOnJump 
         then High 
         else processExpression state (prevNode, currentNode) e
     mem' = if mem == High then High else secLevel
-updateUsingStmt state mem jumps dependOnJump (prevNode, currentNode) (If cond _) =  
-  if secLevelCond == High || dependOnJump 
+updateUsingStmt state mem jumps dependsOnJump (prevNode, currentNode) (If cond _) =  
+  if secLevelCond == High || dependsOnJump 
+    -- TODO
     then (state, mem, Set.insert prevNode jumps)
     else (state, mem, jumps)
   where
@@ -149,3 +153,20 @@ isDependent (graphG, graphDom) (prevNode,currentNode) (x:xs) =
         then True
         else isDependent (graphG, graphDom) (prevNode,currentNode) xs
     Nothing -> isDependent (graphG, graphDom) (prevNode,currentNode) xs
+
+
+-- Helper function with a set of visited nodes
+highContextNodes :: Label -> Label -> CFG -> Set.Set Label -> [[Label]]
+highContextNodes start end cfg visited
+    | start == end = [[]] -- Base case: Path ends when start equals end
+    | start `Set.member` visited = [[]] -- Node already visited, avoid loops
+    | otherwise = [if neighbor == end then [] else neighbor : path | neighbor <- neighbors, path <- highContextNodes neighbor end cfg (Set.insert start visited)]
+        where neighbors = graphSucc start cfg
+
+
+-- Get successors (neighbors) of a node
+graphSucc :: Label -> CFG -> [Label]
+graphSucc node cfg = [to | (from, _, to) <- Set.toList cfg, from == node]
+
+
+-- printf $ show $ Set.fromList (concat $ highContextNodes 4 5 edges Set.empty)

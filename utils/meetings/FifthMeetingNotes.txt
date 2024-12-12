@@ -1,0 +1,2 @@
+Questions
+- If I have a node high that do if high ... then I mov constant to it, making it low, and go back to that if, does that stops being high context?

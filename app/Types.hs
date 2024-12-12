@@ -54,6 +54,6 @@ data SecurityLevel = High | Low
 
 type State = [(Reg, SecurityLevel)]
 type Memory = SecurityLevel
-type HighSecurityJumps = Set.Set Int 
+type HighSecurityJumps = Set.Set (Int,[Int]) 
 
 type SystemState = ([State], Memory, HighSecurityJumps)
