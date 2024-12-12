@@ -16,6 +16,10 @@ edge [fontname="monospace"];
   9 -> 10 [label="add64 r2, 3"];
   10 -> 11 [label="mov64 r3, 1"];
 1 [shape=diamond];
-3 [shape=diamond];
+3 [shape=diamond,style=filled,fillcolor=firebrick4];
+4 [style=filled,fillcolor=firebrick1];
+5 [style=filled,fillcolor=firebrick1];
+6 [style=filled,fillcolor=firebrick1];
+7 [style=filled,fillcolor=firebrick1];
 11 [style="rounded,filled",fillcolor=grey];
 }

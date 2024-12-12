@@ -1,7 +1,8 @@
-module Equations (cfgToEquations) where
+module Equations (cfgToEquations, formatMap) where
 
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Data.List (intercalate)
 
 import Types
 import Ebpf.Asm
@@ -66,3 +67,9 @@ regOrConstant :: RegImm -> Exp
 regOrConstant r = case r of
   R reg -> Register reg
   Imm n -> Const (fromIntegral n)
+
+-- Function for better visualization of the equations
+formatMap :: Equations -> String
+formatMap m = intercalate "\n" $ map formatEntry (Map.toList m)
+  where
+    formatEntry (key, valueList) = show key ++ " -> " ++ show valueList

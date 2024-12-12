@@ -21,8 +21,15 @@ edge [fontname="monospace"];
   13 -> 14 [label="add64 r0, 2"];
   14 -> 15 [label="add64 r3, 1"];
   15 -> 12 [label="jmp"];
-1 [shape=diamond];
+1 [shape=diamond,style=filled,fillcolor=firebrick4];
+2 [style=filled,fillcolor=firebrick1];
+3 [style=filled,fillcolor=firebrick1];
+4 [style=filled,fillcolor=firebrick1];
+5 [style=filled,fillcolor=firebrick1];
 8 [shape=diamond];
-12 [shape=diamond];
+12 [shape=diamond,style=filled,fillcolor=firebrick4];
+13 [style=filled,fillcolor=firebrick1];
+14 [style=filled,fillcolor=firebrick1];
+15 [style=filled,fillcolor=firebrick1];
 16 [style="rounded,filled",fillcolor=grey];
 }
