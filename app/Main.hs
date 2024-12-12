@@ -13,6 +13,7 @@ import Data.Maybe (mapMaybe)
 import Data.List (intercalate)
 
 import Data.Text.Display
+import Data.Graph.Dom as Dom
 
 import Ebpf.Asm
 import Ebpf.AsmParser
@@ -120,12 +121,16 @@ main = do
         Right prog -> do
           let edges = cfg prog
           let equations = cfgToEquations edges (Map.empty)
+          let lastNode = length equations
+          let edgesList = [(from, to) | (from, _, to) <- Set.toList edges]
+          let graphDom = (lastNode, Dom.fromEdges edgesList)
           printf "\nEquations:\n"
           putStrLn $ formatMap equations
-          let (states, _, _) = informationFlowAnalysis edges equations initialState 
+          let (states, _, _) = informationFlowAnalysis graphDom equations initialState 
           printf "\nFinal states:\n"  
           mapM_ printWithIndex (zip ([0..] :: [Int]) states) 
     _ -> do
       putStrLn "Usage:"
       putStrLn "- Create CFG in dot file:\n <EBPF_FILE> <DOT_FILE>"
       putStrLn "- Run information flow analysis:\n <EBPF_FILE>"
+
