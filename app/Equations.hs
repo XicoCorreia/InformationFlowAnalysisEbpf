@@ -52,8 +52,7 @@ opToStmt (Binary _ op r ri) = AssignReg r $ case op of
     exp1 = Register r
     exp2 = regOrConstant ri
 opToStmt (Store _ r _ ri) = AssignMem r (regOrConstant ri)
-opToStmt _ = SKIP
-
+opToStmt _ = error "Not implemented yet"
 
 -- Adds a new equation (statement) to the equation list for the given node.
 addEquation :: Label -> Label -> Stmt -> Equations -> Equations

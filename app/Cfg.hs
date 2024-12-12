@@ -15,7 +15,6 @@ import Ebpf.Display ()
 label :: Program -> LabeledProgram
 label = zip [0..]
 
-
 neg :: Jcmp -> Jcmp
 neg cmp =
   case cmp of

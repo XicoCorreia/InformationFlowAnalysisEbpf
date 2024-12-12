@@ -24,8 +24,7 @@ initialState = [
     (Reg 6, Low), (Reg 7, Low), (Reg 8, Low), 
     (Reg 9, Low), (Reg 10, Low)]
 
-
-------------------- Perform analysis/generate PDF with cfg ------------------------
+------------------- Perform analysis and generate dotfile with cfg ------------------------
 main :: IO ()
 main = do
   args <- Sys.getArgs

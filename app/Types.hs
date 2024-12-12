@@ -43,7 +43,6 @@ data Stmt =
   | AssignMem Reg Exp
   | If Cond Label
   | Goto Label
-  | SKIP -- ! For Undefined statements
     deriving (Show)
 
 type Equations = Map Label [(Label, Stmt)]

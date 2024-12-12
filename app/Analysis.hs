@@ -81,7 +81,6 @@ updateUsingStmt graph state mem jumps dependsOnJump (prevNode, _) (If cond _) =
     secLevelExp2 = processExpression state e2
     secLevelCond = if secLevelExp1 == Low && secLevelExp2 == Low then Low else High
 updateUsingStmt _ state mem jumps _ _ (Goto _) = (state, mem, jumps)  
-updateUsingStmt _ state mem jumps _ _ SKIP = (state, mem, jumps)
 
 -- Process an expression, returning the security level of the expression.
 processExpression :: State -> Exp -> SecurityLevel
@@ -99,7 +98,6 @@ processExpression state  e =
     ModOp e1 e2 -> processBinOp state e1 e2
     AndOp e1 e2 -> processBinOp state e1 e2
     OrOp e1 e2  -> processBinOp state e1 e2
-
 
 -- Processes a binary operation by processing both expressions, returning the higher security level of both.
 processBinOp :: State -> Exp -> Exp -> SecurityLevel
