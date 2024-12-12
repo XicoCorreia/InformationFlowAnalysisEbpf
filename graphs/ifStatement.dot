@@ -13,7 +13,7 @@ edge [fontname="monospace"];
   7 -> 8 [label="mov64 r5, 1"];
   8 -> 9 [label="mov64 r0, 1"];
   9 -> 10 [label="add64 r2, 3"];
-1 [shape=diamond,style=filled,fillcolor=firebrick4];
+1 [style="rounded,filled",fillcolor=firebrick4];
 2 [style=filled,fillcolor=firebrick1];
 3 [style=filled,fillcolor=firebrick1];
 4 [style=filled,fillcolor=firebrick1];

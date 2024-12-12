@@ -56,15 +56,18 @@ dotPrelude =
   "node [shape=box];\n"++
   "edge [fontname=\"monospace\"];\n"
 
-markHighContextNodes :: Program -> [Int] -> String
-markHighContextNodes prog redNodes = concat $ mapMaybe mark $ label prog
+markHighContextNodes :: Program -> ([Int], [Int]) -> String
+markHighContextNodes prog (conds,redNodes) = concat $ mapMaybe mark $ label prog
   where
     mark (lab, Exit)
       | lab `elem` redNodes = return $ printf "%d [style=\"rounded,filled\",fillcolor=firebrick2];\n" lab
+      | lab `elem` conds = return $ printf "%d [style=\"rounded,filled\",fillcolor=firebrick4];\n" lab
       | otherwise           = return $ printf "%d [style=\"rounded,filled\",fillcolor=grey];\n" lab
     mark (lab, JCond _ _ _ _)
-      | lab `elem` redNodes = return $ printf "%d [shape=diamond,style=filled,fillcolor=firebrick4];\n" lab
+      | lab `elem` redNodes = return $ printf "%d [shape=diamond,style=filled,fillcolor=firebrick1];\n" lab
+      | lab `elem` conds = return $ printf "%d [style=\"rounded,filled\",fillcolor=firebrick4];\n" lab
       | otherwise           = return $ printf "%d [shape=diamond];\n" lab
     mark (lab, _) 
       | lab `elem` redNodes = return $ printf "%d [style=filled,fillcolor=firebrick1];\n" lab
+      | lab `elem` conds = return $ printf "%d [style=\"rounded,filled\",fillcolor=firebrick4];\n" lab
       | otherwise           = Nothing

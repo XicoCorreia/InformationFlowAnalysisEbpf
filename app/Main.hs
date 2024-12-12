@@ -43,7 +43,8 @@ main = do
             edgesList = [(from, to) | (from, _, to) <- Set.toList cfg']
             graphDom = ((length equations), Dom.fromEdges edgesList) 
             (states, memory, context) = informationFlowAnalysis graphDom equations initialState 
-            flatContext = concatMap (\(x, xs) -> x : xs) (Set.toList context)
+            conditions = Set.toList $ Set.map fst context
+            dependencies = concatMap snd (Set.toList context)
             edges = cfgToDot $ cfg prog
           in do
           printf "\nEquations:\n"
@@ -55,11 +56,9 @@ main = do
           putStrLn $ show memory
           writeFile dotFile (dotPrelude ++
                     edges ++
-                    (markHighContextNodes prog flatContext) ++ "}")
+                    (markHighContextNodes prog (conditions, dependencies)) ++ "}")
           printf "\nVisualised the CFG in %s\n" dotFile
           printf $ "\n-----------------------Analysis completed-----------------------\n"
     _ -> do
       putStrLn "Usage:"
       putStrLn "- Run information flow analysis and visualize cfg:\n <EBPF_FILE> <DOT_FILE>"
-
-
