@@ -3,5 +3,11 @@ Questions
 - Nested while cycle
 - Problem to assigning secrets during program?
 
+check if path current node nodePD
+COMPUTE for each node what nodes depend on them 
+Successors or just check paths
+chekc the path between condition and post dominant
+
 Thesis
 - Show description and get the approvement
+change learning goals
