@@ -6,7 +6,6 @@ import Data.List (find)
 
 
 import Data.Graph.Dom as Dom
-import Data.Graph as G
 
 import Types
 import Ebpf.Asm
@@ -15,48 +14,46 @@ import Ebpf.Asm
 -- Perform a the information flow  analysis on a set of equations.
 informationFlowAnalysis :: CFG -> Equations -> State -> SystemState
 informationFlowAnalysis cfg eq initialState =
-  fixpointComputation (graphG, graphDom) (replicate ((length eq) + 1) initialState, Low, Set.empty) (Map.toList eq)
+  fixpointComputation graphDom (replicate ((length eq) + 1) initialState, Low, Set.empty) (Map.toList eq)
       where 
       lastNode = length eq
       edgesList = [(from, to) | (from, _, to) <- Set.toList cfg]
       graphDom = (lastNode, Dom.fromEdges edgesList)
-      graphG = G.buildG (0, lastNode) edgesList
 
 
 -- Perform fixpoint computation for the analysis.
-fixpointComputation :: (G.Graph, Dom.Rooted) -> SystemState -> [(Label, [(Label, Stmt)])] -> SystemState 
-fixpointComputation graphs ss eq = 
+fixpointComputation :: Dom.Rooted -> SystemState -> [(Label, [(Label, Stmt)])] -> SystemState 
+fixpointComputation graph ss eq = 
   if ss == ss'
     then ss'
-    else fixpointComputation graphs ss' eq
+    else fixpointComputation graph ss' eq
       where 
-        ss' = foldl (updateSystemState graphs) ss eq
+        ss' = foldl (updateSystemState graph) ss eq
 
 -- This function updates the System state with a new state for the node being processed.
-updateSystemState :: (G.Graph, Dom.Rooted) -> SystemState -> (Label, [(Label, Stmt)]) -> SystemState
-updateSystemState graphs (states, mem, jumps) (nodeIdx, eqs) = 
+updateSystemState :: Dom.Rooted -> SystemState -> (Label, [(Label, Stmt)]) -> SystemState
+updateSystemState graph (states, mem, jumps) (nodeIdx, eqs) = 
   (before ++ [state'] ++ after, mem', jumps')
   where
     startState = states !! nodeIdx
-    (state', mem', jumps') = processElement graphs startState (states, mem, jumps) (nodeIdx, eqs)
+    (state', mem', jumps') = processElement graph startState (states, mem, jumps) (nodeIdx, eqs)
     before = take nodeIdx states 
     after = drop (nodeIdx + 1) states
     
 -- Processes the equations for a specific node, returning the updated state.     
-processElement :: (G.Graph, Dom.Rooted) -> State -> SystemState -> (Label, [(Label, Stmt)]) -> (State, Memory, HighSecurityJumps)
+processElement :: Dom.Rooted -> State -> SystemState -> (Label, [(Label, Stmt)]) -> (State, Memory, HighSecurityJumps)
 processElement _ state (_, m, j) (_,[]) = (state, m, j)
-processElement graphs state (states, mem, jumps) (currentNode, ((prevNode, stmt):es)) = otherState
+processElement graph state (states, mem, jumps) (currentNode, ((prevNode, stmt):es)) = otherState
   where 
-    -- TODO
-    dependsOnJump = isDependent graphs (prevNode,currentNode) (Set.toList jumps)
+    dependsOnJump = isDependent currentNode (Set.toList jumps)
     prevState = (states !! prevNode)
-    (state',  mem', jumps') = updateUsingStmt prevState mem jumps dependsOnJump (prevNode, currentNode) stmt 
+    (state',  mem', jumps') = updateUsingStmt graph prevState mem jumps dependsOnJump (prevNode, currentNode) stmt 
     newState = unionStt state state'
-    otherState = processElement graphs newState (states,  mem', jumps') (currentNode, es)
+    otherState = processElement graph newState (states,  mem', jumps') (currentNode, es)
 
 -- Update a node's state by analysing the security level of an equation.
-updateUsingStmt :: State -> Memory -> HighSecurityJumps -> Bool -> (Int,Int) -> Stmt -> (State, Memory, HighSecurityJumps)
-updateUsingStmt state mem jumps dependsOnJump (prevNode, currentNode) (AssignReg r e) = 
+updateUsingStmt :: Dom.Rooted -> State -> Memory -> HighSecurityJumps -> Bool -> (Int,Int) -> Stmt -> (State, Memory, HighSecurityJumps)
+updateUsingStmt _ state mem jumps dependsOnJump (prevNode, currentNode) (AssignReg r e) = 
   case lookup r state of 
     Nothing -> error ("Not defined register: " ++ show r)
     _ -> (updatedState, mem, jumps)
@@ -66,7 +63,7 @@ updateUsingStmt state mem jumps dependsOnJump (prevNode, currentNode) (AssignReg
         then High 
         else processExpression state (prevNode, currentNode) e
     updatedState = updateRegisterSecurity r secLevel state
-updateUsingStmt state mem jumps dependsOnJump (prevNode, currentNode) (AssignMem r e) = 
+updateUsingStmt _ state mem jumps dependsOnJump (prevNode, currentNode) (AssignMem r e) = 
   case lookup r state of 
     Nothing -> error ("Not defined register: " ++ show r)
     _ -> (state, mem', jumps)
@@ -76,18 +73,23 @@ updateUsingStmt state mem jumps dependsOnJump (prevNode, currentNode) (AssignMem
         then High 
         else processExpression state (prevNode, currentNode) e
     mem' = if mem == High then High else secLevel
-updateUsingStmt state mem jumps dependsOnJump (prevNode, currentNode) (If cond _) =  
+updateUsingStmt graph state mem jumps dependsOnJump (prevNode, currentNode) (If cond _) =  
   if secLevelCond == High || dependsOnJump 
-    -- TODO
-    then (state, mem, Set.insert prevNode jumps)
+    then 
+      case find (\(n,_) -> n == prevNode) (ipdom graph) of
+        Just (_, nodePD) -> let
+            context = Set.fromList (concat $ highContextNodes prevNode nodePD graph Set.empty)
+            in
+            (state, mem, Set.insert (prevNode, Set.toList context) jumps)
+        Nothing -> (state, mem, jumps)
     else (state, mem, jumps)
   where
     (e1, e2) = extractExpsFromCond cond
     secLevelExp1 = processExpression state (prevNode, currentNode)  e1
     secLevelExp2 = processExpression state (prevNode, currentNode)  e2
     secLevelCond = if secLevelExp1 == Low && secLevelExp2 == Low then Low else High
-updateUsingStmt state mem jumps _ _ (Goto _) = (state, mem, jumps)  
-updateUsingStmt state mem jumps _ _ SKIP = (state, mem, jumps)
+updateUsingStmt _ state mem jumps _ _ (Goto _) = (state, mem, jumps)  
+updateUsingStmt _ state mem jumps _ _ SKIP = (state, mem, jumps)
 
 -- Process an expression, returning the security level of the expression.
 processExpression :: State -> (Int,Int) -> Exp -> SecurityLevel
@@ -141,32 +143,24 @@ unionStt = zipWith combine
 -- Check wheter a node is reachable from a conditional jump and if it is a post dominant node.
 -- If it is reachable and does not post dominates one of the nodes containing a conditional jump,
 -- it is considered dependent, meaning it relies on a secret condition.
-isDependent :: (G.Graph, Dom.Rooted) -> (Label,Label) -> [Int] -> Bool
-isDependent _ _ [] = False
-isDependent (graphG, graphDom) (prevNode,currentNode) (x:xs) = 
-  case find (\(n, _) -> n == x) (ipdom graphDom) of 
-    Just (_, nodePD) ->
-      if (prevNode `elem` (G.reachable graphG x)) 
-          && currentNode <= nodePD 
-          && nodePD /= -1
-          && not ((prevNode `elem` (G.reachable graphG nodePD)) && currentNode <= x)
-        then True
-        else isDependent (graphG, graphDom) (prevNode,currentNode) xs
-    Nothing -> isDependent (graphG, graphDom) (prevNode,currentNode) xs
+isDependent :: Label -> [(Int, [Int])] -> Bool
+isDependent _ [] = False
+isDependent node ((_,dependents):xs) = 
+  if node `elem` dependents then True else isDependent node xs
 
 
 -- Helper function with a set of visited nodes
-highContextNodes :: Label -> Label -> CFG -> Set.Set Label -> [[Label]]
-highContextNodes start end cfg visited
+highContextNodes :: Label -> Label -> Dom.Rooted -> Set.Set Label -> [[Label]]
+highContextNodes start end (n,cfg) visited
     | start == end = [[]] -- Base case: Path ends when start equals end
     | start `Set.member` visited = [[]] -- Node already visited, avoid loops
-    | otherwise = [if neighbor == end then [] else neighbor : path | neighbor <- neighbors, path <- highContextNodes neighbor end cfg (Set.insert start visited)]
-        where neighbors = graphSucc start cfg
+    | otherwise = [if neighbor == end then [] else neighbor : path | neighbor <- neighbors, path <- highContextNodes neighbor end (n,cfg) (Set.insert start visited)]
+        where neighbors = graphSucc start (toEdges cfg)
 
 
 -- Get successors (neighbors) of a node
-graphSucc :: Label -> CFG -> [Label]
-graphSucc node cfg = [to | (from, _, to) <- Set.toList cfg, from == node]
+graphSucc :: Label -> [Edge] -> [Label]
+graphSucc node cfg = [to | (from, to) <- cfg, from == node]
 
 
--- printf $ show $ Set.fromList (concat $ highContextNodes 4 5 edges Set.empty)
+--TODO Fix case where edge inside -> pdom, pdom is not in / and node -> inside 
