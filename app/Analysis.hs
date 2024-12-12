@@ -45,7 +45,7 @@ processElement :: Dom.Rooted -> State -> SystemState -> (Label, [(Label, Stmt)])
 processElement _ state (_, m, j) (_,[]) = (state, m, j)
 processElement graph state (states, mem, jumps) (currentNode, ((prevNode, stmt):es)) = otherState
   where 
-    dependsOnJump = isDependent currentNode (Set.toList jumps)
+    dependsOnJump = isDependent (prevNode, currentNode) (Set.toList jumps)
     prevState = (states !! prevNode)
     (state',  mem', jumps') = updateUsingStmt graph prevState mem jumps dependsOnJump (prevNode, currentNode) stmt 
     newState = unionStt state state'
@@ -79,8 +79,9 @@ updateUsingStmt graph state mem jumps dependsOnJump (prevNode, currentNode) (If 
       case find (\(n,_) -> n == prevNode) (ipdom graph) of
         Just (_, nodePD) -> let
             context = Set.fromList (concat $ highContextNodes prevNode nodePD graph Set.empty)
+            context' = Set.delete prevNode context
             in
-            (state, mem, Set.insert (prevNode, Set.toList context) jumps)
+            (state, mem, Set.insert (prevNode, Set.toList context') jumps)
         Nothing -> (state, mem, jumps)
     else (state, mem, jumps)
   where
@@ -143,10 +144,12 @@ unionStt = zipWith combine
 -- Check wheter a node is reachable from a conditional jump and if it is a post dominant node.
 -- If it is reachable and does not post dominates one of the nodes containing a conditional jump,
 -- it is considered dependent, meaning it relies on a secret condition.
-isDependent :: Label -> [(Int, [Int])] -> Bool
+isDependent :: (Label, Label) -> [(Int, [Int])] -> Bool
 isDependent _ [] = False
-isDependent node ((_,dependents):xs) = 
-  if node `elem` dependents then True else isDependent node xs
+isDependent (prevNode, currentNode) ((cond,dependents):xs) = 
+  if prevNode `elem` dependents || ((prevNode == cond) && currentNode `elem` dependents)
+    then True 
+    else isDependent (prevNode, currentNode) xs
 
 
 -- Helper function with a set of visited nodes
