@@ -1,8 +1,7 @@
 Questions
 - Nested if loop graph check
-- Neste while cycle
+- Nested while cycle
 - Problem to assigning secrets during program?
-- Show report structure
 
 Thesis
 - Show description and get the approvement
