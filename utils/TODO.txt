@@ -1,5 +1,4 @@
 TODO Coding
-1. Let user define the states
 2. Update graph
 
 TODO Reading
