@@ -1,6 +1,4 @@
 TODO Coding
-- Check isDependent
-- Change Int to Label HSC
 - Test real ebpf programs
 - Interval analysis
 
